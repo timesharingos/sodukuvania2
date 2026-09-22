@@ -13,6 +13,11 @@ import Mathlib.Data.Finset.Max
   I would replace it with the constructive design.
 -/
 
+abbrev Wrapperset (α : Type) [DecidableEq α] := Finset α
+namespace Wrapperset
+export Finset (card_eq_one card_pos min'_mem card_erase_of_mem)
+end Wrapperset
+
 structure Dims where
   un : Nat
   um : Nat
@@ -95,7 +100,8 @@ structure Cell (dims : Dims) where
   region : Fin dims.rc
   regioncord : Fin dims.rn × Fin dims.rm
   value : Option (Nat ⊕ Letter)
-  candidates : Finset (Nat ⊕ Letter)
+  candidates : Wrapperset (Nat ⊕ Letter)
+deriving DecidableEq
 
 def Cell.valid {dims : Dims} (c : Cell dims) : Prop :=
   c.value.isSome = true ∨ c.candidates.card > 0
@@ -103,7 +109,7 @@ def Cell.valid {dims : Dims} (c : Cell dims) : Prop :=
 def Cell.forcedValue {dims : Dims} (c : Cell dims)
   (h : c.candidates.card = 1) : Nat ⊕ Letter :=
     c.candidates.min' (by
-        rw [Finset.card_eq_one] at h
+        rw [Wrapperset.card_eq_one] at h
         rcases h with ⟨ a, ha ⟩
         exact ⟨ a, by rw [ha]; simp ⟩
       )
@@ -138,10 +144,10 @@ theorem cell_remove_only_candidate {dims : Dims} (c : Cell dims) (can : Nat ⊕ 
   (h2 : c.forcedValue h1 = can) :
     ¬ (c.removeCandidate can).valid := by
   intro h
-  simp only [Cell.valid, Cell.removeCandidate, gt_iff_lt, Finset.card_pos] at h
+  simp only [Cell.valid, Cell.removeCandidate, gt_iff_lt, Wrapperset.card_pos] at h
   have : can ∈ c.candidates := by
     rw [<- h2]
-    exact Finset.min'_mem _ _
+    exact Wrapperset.min'_mem _ _
   have hval : c.value = none := by simpa using h0
   rcases h with h | h
   case inl =>
@@ -149,22 +155,32 @@ theorem cell_remove_only_candidate {dims : Dims} (c : Cell dims) (can : Nat ⊕ 
     simp at h
   case inr =>
     have hcard : (c.candidates.erase can).card = 0 := by
-      rw [Finset.card_erase_of_mem this, h1]
-    have hpos : 0 < (c.candidates.erase can).card := Finset.card_pos.mpr h
+      rw [Wrapperset.card_erase_of_mem this, h1]
+    have hpos : 0 < (c.candidates.erase can).card := Wrapperset.card_pos.mpr h
     omega
 
-class Region (dims : Dims) (gid : Nat)
+class Region (R : Type) (dims : Dims) (gid : Nat) [DecidableEq R]
 where
-  rid : Nat
-  cells : Finset (Cell dims)
-  valid : Prop
-  belongto : ∀ c ∈ cells, c.region = rid ∧ c.grid = gid
+  rid : R -> Nat
+  cells : R -> Wrapperset (Cell dims)
+  valid :
+    R -> Prop
+  belongto : ∀ r : R, ∀ c ∈ cells r, c.region = rid r ∧ c.grid = gid
   index? :
-    Fin dims.rn -> Fin dims.rm -> Option (Cell dims)
+    R -> Fin dims.rn -> Fin dims.rm -> Option (Cell dims)
 
-structure Grid (dims : Dims) (gid : Nat)
+structure Grid (R : Type) (dims : Dims) (gid : Nat) [DecidableEq R] [Region R dims gid]
 where
-  regions : Finset (Region dims gid)
-  valid : Prop := ∀ r ∈ regions, r.valid
-  index? : Fin dims.rc -> Option (Region dims gid) :=
-    fun region => regions.toList.find? (fun r => r.rid = region)
+  regions : Wrapperset R
+
+def Grid.valid
+  {R : Type} {dims : Dims} {gid : Nat}
+  [DecidableEq R] [Region R dims gid]
+  (g : Grid R dims gid) : Prop :=
+    ∀ region ∈ g.regions, @Region.valid R dims gid _ _ region
+
+noncomputable def Grid.index?
+  {R : Type} {dims : Dims} {gid : Nat}
+  [DecidableEq R] [Region R dims gid]
+  (g : Grid R dims gid) (idx : Fin dims.rc) : Option R :=
+    g.regions.toList.find? (fun r => @Region.rid R dims gid _ _ r = idx)

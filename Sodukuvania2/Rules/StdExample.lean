@@ -161,26 +161,66 @@ theorem cell_remove_only_candidate {dims : Dims} (c : Cell dims) (can : Nat ⊕ 
 
 class Region (R : Type) (dims : Dims) (gid : Nat) [DecidableEq R]
 where
-  rid : R -> Nat
-  cells : R -> Wrapperset (Cell dims)
-  valid :
-    R -> Prop
+  rid : R → Nat
+  cells : R → Wrapperset (Cell dims)
+  validextra :
+    R → Prop
   belongto : ∀ r : R, ∀ c ∈ cells r, c.region = rid r ∧ c.grid = gid
   index? :
-    R -> Fin dims.rn -> Fin dims.rm -> Option (Cell dims)
+    R → Fin dims.rn → Fin dims.rm → Option (Cell dims)
 
-structure Grid (R : Type) (dims : Dims) (gid : Nat) [DecidableEq R] [Region R dims gid]
+def Region.valid
+  {R : Type} {dims : Dims} {gid : Nat}
+  [deceq : DecidableEq R] [rtype : Region R dims gid]
+  (r : R) : Prop :=
+  (∀ c ∈ @Region.cells R dims gid deceq rtype r, c.valid) ∧ Region.validextra dims gid r
+
+def Region.invalid
+  {R : Type} {dims : Dims} {gid : Nat}
+  [deceq : DecidableEq R] [rtype : Region R dims gid]
+  (r : R) : Prop :=
+  (∃ c ∈ @Region.cells R dims gid deceq rtype r, ¬ c.valid) ∨ (¬ Region.validextra dims gid r)
+
+structure Grid (dims : Dims)
 where
-  regions : Wrapperset R
+  gid : Nat
+  R : Type
+  [deceq : DecidableEq R]
+  [regiontype : Region R dims gid]
+  regions : List R
+  validextra : Prop
 
-def Grid.valid
-  {R : Type} {dims : Dims} {gid : Nat}
-  [DecidableEq R] [Region R dims gid]
-  (g : Grid R dims gid) : Prop :=
-    ∀ region ∈ g.regions, @Region.valid R dims gid _ _ region
+def Grid.index?
+  {dims : Dims}
+  (g : Grid dims) (idx : Fin dims.rc) : Option g.R :=
+    g.regions.find? (fun r => @Region.rid g.R dims g.gid _ g.regiontype r = idx)
 
-noncomputable def Grid.index?
-  {R : Type} {dims : Dims} {gid : Nat}
-  [DecidableEq R] [Region R dims gid]
-  (g : Grid R dims gid) (idx : Fin dims.rc) : Option R :=
-    g.regions.toList.find? (fun r => @Region.rid R dims gid _ _ r = idx)
+structure Puzzle (dims : Dims) where
+  grids : List (Grid dims)
+  unique : ∀ g1 ∈ grids, ∀ g2 ∈ grids, g1 ≠ g2 → g1.gid ≠ g2.gid
+  validextra : Prop
+
+def Puzzle.index?
+  {dims : Dims}
+  (p : Puzzle dims) (idx : Fin dims.gc) : Option (Grid dims) :=
+    p.grids.find? (fun g => g.gid = idx)
+
+class Solvable (S : Type*)
+where
+  valid : S -> Prop
+  invalid : S -> Prop
+
+instance (dims : Dims) : Solvable (Grid dims) where
+  valid s :=
+    (∀ r ∈ s.regions, @Region.valid s.R dims s.gid s.deceq s.regiontype r) ∧ s.validextra
+  invalid s :=
+    (∃ r ∈ s.regions, @Region.invalid s.R dims s.gid s.deceq s.regiontype r) ∨ (¬ s.validextra)
+
+instance (dims : Dims) : Solvable (Puzzle dims) where
+  valid s :=
+    (∀ g ∈ s.grids, Solvable.valid g) ∧ s.validextra
+  invalid s :=
+    (∃ g ∈ s.grids, Solvable.invalid g) ∨ (¬ s.validextra)
+
+def wellSovlable {dims : Dims} (p : Puzzle dims) : Prop :=
+  Solvable.valid p

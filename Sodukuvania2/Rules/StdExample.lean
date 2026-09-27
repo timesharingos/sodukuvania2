@@ -51,6 +51,8 @@ def Letter.toNat : Letter → Nat
   | .u => 20 | .v => 21 | .w => 22 | .x => 23 | .y => 24
   | .z => 25
 
+def Letter.to_cell_set : Wrapperset (Fin 10 ⊕ Letter) := (Finset.univ : Finset Letter).image Sum.inr
+
 theorem Letter.toNat_injective : Function.Injective Letter.toNat := by
   decide
 
@@ -102,59 +104,70 @@ structure Cell (dims : Dims) where
   regioncord : Fin dims.rn × Fin dims.rm
 deriving DecidableEq
 
-class Region
-  (R : Type) (dims : Dims) (gid : Nat) [DecidableEq R]
-where
-  rid : R → Nat
-  validextra :
-    List (Cell dims) → Prop
+def Hasvalue (dims : Dims) := Cell dims → (Fin 10 ⊕ Letter) → Prop
+def Hascandidates (dims : Dims) := Cell dims → Wrapperset (Fin 10 ⊕ Letter) → Prop
 
-structure Grid (dims : Dims)
-where
+structure Region (dims : Dims) where
+  rid : Nat
+  validextra :
+    List (Cell dims) → Hasvalue dims → Hascandidates dims → Prop
+
+def Hascells (dims : Dims) := Region dims → List (Cell dims) → Prop
+
+structure Grid (dims : Dims) where
   gid : Nat
-  R : Type
-  [deceq : DecidableEq R]
-  [regiontype : Region R dims gid]
-  validextra : Prop
+  validextra :
+    List (Region dims) → Hascells dims → Hasvalue dims → Hascandidates dims → Prop
+
+def Hasregions (dims : Dims) := Grid dims → List (Region dims) → Prop
 
 structure Puzzle (dims : Dims) where
-  validextra : Prop
+  validextra :
+    List (Grid dims) → Hasregions dims → Hascells dims → Hasvalue dims → Hascandidates dims → Prop
+
+def Hasgrids (dims : Dims) := Puzzle dims → List (Grid dims) → Prop
+
+def Hasmap := (Fin 10 ⊕ Letter) → Fin 10
 
 def cells_belong_to_region {dims : Dims}
   (cells : List (Cell dims)) (rid : Nat) : Prop :=
   ∀ c ∈ cells, c.region = rid
 
-def Hasvalue (dims : Dims) := Cell dims → (Fin 10 ⊕ Letter) → Prop
-def Hascandidates (dims : Dims) := Cell dims → Wrapperset (Fin 10 ⊕ Letter) → Prop
-def Hascells
-  {R : Type} {dims : Dims} {gid : Nat}
-  [DecidableEq R] [rtype : Region R dims gid] :=
-  (r : R) → (cells : List (Cell dims)) →
-    (cells_belong_to_region cells (@Region.rid _ _ _ _ rtype r))
-  → Prop
-def Hasregions (dims : Dims) := (g : Grid dims) → List g.R → Prop
-def Hasgrids (dims : Dims) := Puzzle dims → List (Grid dims) → Prop
-
 structure PuzzleState (dims : Dims) where
   hv : Hasvalue dims
   hc : Hascandidates dims
-  hcells : (g : Grid dims) → @Hascells _ _ _ g.deceq g.regiontype
+  hcells : Hascells dims
   hr : Hasregions dims
   hg : Hasgrids dims
+  hm : Hasmap
 
 def PuzzleState.from
   {dims : Dims}
   (hv : Option (Hasvalue dims))
   (hc : Option (Hascandidates dims))
-  (hcells : Option ((g : Grid dims) → @Hascells _ _ _ g.deceq g.regiontype))
+  (hcells : Option (Hascells dims))
   (hr : Option (Hasregions dims))
-  (hg : Option (Hasgrids dims)) : PuzzleState dims :=
+  (hg : Option (Hasgrids dims))
+  (hm : Option (Hasmap)) : PuzzleState dims :=
   {
     hv := hv.getD (fun _ _ => False)
     hc := hc.getD (fun _ cans => cans = {} )
-    hcells := hcells.getD (fun _ => (fun _ cells _ => cells = []))
+    hcells := hcells.getD (fun _ cells => cells = [])
     hr := hr.getD (fun _ regions => regions = [])
     hg := hg.getD (fun _ grids => grids = [])
+    hm := hm.getD (fun (val : Fin 10 ⊕ Letter)
+      => match val with
+      | .inl v => v
+      | .inr _ => 0
+    )
+  }
+
+def PuzzleState.init {dims : Dims} : PuzzleState dims :=
+  {
+    PuzzleState.from none none none none none none with
+    hc := fun _ cans => cans =
+      {.inl 1, .inl 2, .inl 3, .inl 4, .inl 5, .inl 6, .inl 7, .inl 8, .inl 9, .inl 0} ∪
+        Letter.to_cell_set
   }
 
 def Hascandidates.functional {dims : Dims} (hc : Hascandidates dims) : Prop :=
@@ -181,30 +194,49 @@ def Cell.valid_if_state
   c.valid_can_if_state hc ∧ c.valid_have_if_state hv hc
 
 def Region.valid_if_state
-  {R : Type} {dims : Dims} {gid : Nat}
-  [DecidableEq R] [rtype : Region R dims gid]
-  (r : R)
-  (hcells : @Hascells _ _ _ _ rtype)
+  {dims : Dims} (r : Region dims)
+  (hcells : Hascells dims)
   (hv : Hasvalue dims)
   (hc : Hascandidates dims)
   : Prop :=
   ∀ cells : List (Cell dims),
-  ∃ belongto : cells_belong_to_region cells (@Region.rid _ _ _ _ rtype r),
-    hcells r cells belongto →
+    hcells r cells →
+    cells_belong_to_region cells r.rid →
     (∀ c ∈ cells, c.valid_if_state hv hc)
-    ∧ (@Region.validextra _ _ _ _ rtype cells)
+    ∧ r.validextra cells hv hc
+
+def Region.valid_nodedup
+  {dims : Dims} (cells : List (Cell dims)) (hv : Hasvalue dims) (_ : Hascandidates dims) : Prop :=
+  ∀ cell1 ∈ cells, ∀ cell2 ∈ cells, ∃ v1 v2,
+    hv cell1 v1 → hv cell2 v2 → cell1.ucord ≠ cell2.ucord → v1 ≠ v2
+
+def Region.valid_finset
+  {dims : Dims} (limit : Wrapperset (Fin 10 ⊕ Letter))
+  (cells : List (Cell dims)) (hv : Hasvalue dims) (hc : Hascandidates dims) : Prop :=
+  ∀ cell ∈ cells,
+    (∃ v, hv cell v → v ∈ limit) ∧
+    (∃ cans, hc cell cans → (∀ can ∈ cans, can ∈ limit))
+
+def Region.valid_sum
+  {dims : Dims} (hm : Hasmap) (sum : Nat)
+  (cells : List (Cell dims)) (hv : Hasvalue dims) (_ : Hascandidates dims) : Prop :=
+  ∃ vs : List (Fin 10 ⊕ Letter),
+    (vs.length = cells.length ∧ (∀ items ∈ cells.zip vs, hv items.1 items.2)) →
+    (vs.map fun c => (hm c : Nat)).sum = sum
+
+-- TODO : Added more
 
 def Grid.valid_if_state
   {dims : Dims} (g : Grid dims)
   (hr : Hasregions dims)
-  (hcells : @Hascells _ _ _ g.deceq g.regiontype)
+  (hcells : Hascells dims)
   (hv : Hasvalue dims)
   (hc : Hascandidates dims)
   : Prop :=
-  ∀ regions : List g.R,
+  ∀ regions : List (Region dims),
     hr g regions →
-    (∀ region ∈ regions, @Region.valid_if_state _ _ _ g.deceq g.regiontype region hcells hv hc) ∧
-    g.validextra
+    (∀ region ∈ regions, region.valid_if_state hcells hv hc) ∧
+    g.validextra regions hcells hv hc
 
 def Grid.grids_unique_in_puzzle {dims : Dims} (grids : List (Grid dims)) : Prop :=
   ∀ g1 ∈ grids, ∀ g2 ∈ grids, g1.gid = g2.gid → g1 = g2
@@ -213,20 +245,20 @@ def Puzzle.valid_if_state
   {dims : Dims} (p : Puzzle dims)
   (hg : Hasgrids dims)
   (hr : Hasregions dims)
-  (hcells : (g : Grid dims) → @Hascells _ _ _ g.deceq g.regiontype)
+  (hcells : Hascells dims)
   (hv : Hasvalue dims)
   (hc : Hascandidates dims)
   : Prop :=
   ∀ grids : List (Grid dims),
     hg p grids →
-    (∀ g ∈ grids, g.valid_if_state hr (hcells g) hv hc) ∧
-    p.validextra
+    (∀ g ∈ grids, g.valid_if_state hr hcells hv hc) ∧
+    p.validextra grids hr hcells hv hc
 
 def Puzzle.always_valid
   {dims : Dims} (p : Puzzle dims)
   (hg : Hasgrids dims)
   (hr : Hasregions dims)
-  (hcells : (g : Grid dims) → @Hascells _ _ _ g.deceq g.regiontype)
+  (hcells : Hascells dims)
   (hv : Hasvalue dims)
   (hc : Hascandidates dims) : Prop :=
   p.valid_if_state hg hr hcells hv hc
@@ -307,21 +339,61 @@ theorem valid_puzzle_imp_valid_grid
   (pvalid : p.always_valid pstate.hg pstate.hr pstate.hcells pstate.hv pstate.hc) :
   ∀ grids : List (Grid dims),
     pstate.hg p grids → (
-      ∀ grid ∈ grids, grid.valid_if_state pstate.hr (pstate.hcells grid) pstate.hv pstate.hc
+      ∀ grid ∈ grids, grid.valid_if_state pstate.hr pstate.hcells pstate.hv pstate.hc
     ) := by
   intro grids gridsbelong grid gridbelong
   have h := pvalid grids gridsbelong
   exact h.1 grid gridbelong
 
-/-
-TODO: cascade valid imp
 theorem valid_grid_imp_valid_region
--/
-/-
-def cellinPuzzles {dims : Dims} (p : Puzzle dims) (c : Cell dims) : Prop :=
-  ∃ (g : Grid dims) (r : g.R),
-    c ∈ @Region.cells g.R _ _ _ g.regiontype r ∧ r ∈ g.regions ∧ g ∈ p.grids
+  {dims : Dims} (g : Grid dims)
+  (pstate : PuzzleState dims)
+  (gvalid : g.valid_if_state pstate.hr pstate.hcells pstate.hv pstate.hc) :
+  ∀ regions : List (Region dims),
+    pstate.hr g regions → (
+      ∀ region ∈ regions, region.valid_if_state pstate.hcells pstate.hv pstate.hc
+    ) := by
+  intro regions regionsbelong region regionbelong
+  have h := gvalid regions regionsbelong
+  exact h.1 region regionbelong
 
+theorem valid_region_imp_valid_cell
+  {dims : Dims} (r : Region dims)
+  (pstate : PuzzleState dims)
+  (rvalid : r.valid_if_state pstate.hcells pstate.hv pstate.hc) :
+  ∀ cells : List (Cell dims),
+    pstate.hcells r cells →
+    cells_belong_to_region cells r.rid →
+    (
+      ∀ cell ∈ cells, cell.valid_if_state pstate.hv pstate.hc
+    ) := by
+  intro cells cellsbelong belongto cell cellbelong
+  have h := rvalid cells cellsbelong belongto
+  exact h.1 cell cellbelong
+
+def cell_in_puzzle
+  {dims : Dims} (pstate : PuzzleState dims)
+  (c : Cell dims) (p : Puzzle dims) : Prop :=
+    ∃ grids regions cells,
+      pstate.hg p grids ∧
+      (∃ grid ∈ grids, pstate.hr grid regions ∧
+        (∃ region ∈ regions, pstate.hcells region cells ∧
+          c ∈ cells
+        )
+      )
+
+def eq_imp_empty_finalimp_neq
+  {dims : Dims} (can : Fin 10 ⊕ Letter) (ca : Cell dims) (cb : Cell dims)
+  (pstate : PuzzleState dims)
+  (p : Puzzle dims) (pvalid : p.always_valid pstate.hg pstate.hr pstate.hcells pstate.hv pstate.hc)
+  (preb : cell_in_puzzle pstate cb p)
+  (eq_imp_empty : (pstate.hv ca can) → ¬ cb.valid_if_state pstate.hv pstate.hc)
+  : {pstate_new : PuzzleState dims //
+      ∃ cans, can ∉ cans ∧ pstate_new.hc ca cans ∧
+      {pstate with hc := pstate_new.hc} = pstate_new} :=
+  -- TODO
+  sorry
+/-
 theorem ensure_valid
   {dims : Dims} {can : Nat} (ca : Cell dims) (cb : Cell dims)
   (p : Puzzle dims)

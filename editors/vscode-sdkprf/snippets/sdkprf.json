@@ -1,0 +1,83 @@
+{
+  "Rule": {
+    "prefix": "rule",
+    "body": [
+      "${1:rule_name}: ${2:premises} => ${3:conclusion} with (with ${4:given})"
+    ],
+    "description": "Inference rule: <rule_name>: premises... => <expr> [with_clause...]"
+  },
+  "Implicit premise": {
+    "prefix": "implicit",
+    "body": [
+      "[${1:stat}]"
+    ],
+    "description": "Implicit verification expression: [<stat>]"
+  },
+  "Intro block": {
+    "prefix": "intro",
+    "body": [
+      "intro ${1:name}: ${2:premises}",
+      "\t- ${3:rule_name}: ${4:premises} => ${5:conclusion}",
+      "end ${1:name}"
+    ],
+    "description": "Conditional rule block; external references automatically get the <name>. prefix"
+  },
+  "Section block": {
+    "prefix": "section",
+    "body": [
+      "section ${1:name}:",
+      "\t- ${2:rule_name}: ${3:premises} => ${4:conclusion}",
+      "end ${1:name}"
+    ],
+    "description": "Set rule block; takes only a name; external references automatically get the <name>. prefix"
+  },
+  "With clause": {
+    "prefix": "with",
+    "body": [
+      "(with ${1|given,axioms,known|})"
+    ],
+    "description": "with clause: given / axioms / known"
+  },
+  "With clause with by": {
+    "prefix": "withby",
+    "body": [
+      "(with ${1:target} by ${2:meta_var}=${3:value})"
+    ],
+    "description": "with clause with meta-variable bindings"
+  },
+  "Import module": {
+    "prefix": "import",
+    "body": [
+      "import ${1:folder}.${2:module}"
+    ],
+    "description": "Import a module by directory and file name"
+  },
+  "Unlock region": {
+    "prefix": "unlock",
+    "body": [
+      "unlock ${1:ug1}"
+    ],
+    "description": "Unlock a fog-of-war region"
+  },
+  "Candidate set": {
+    "prefix": "candidate",
+    "body": [
+      "${1:cell} =? {${2:1, 2, 3}}"
+    ],
+    "description": "Candidate set: =?"
+  },
+  "Value": {
+    "prefix": "value",
+    "body": [
+      "${1:cell} = ${2:5}"
+    ],
+    "description": "Value assignment: ="
+  },
+  "Structured binding": {
+    "prefix": "bind",
+    "body": [
+      "${1:name} := {${2:elements}}"
+    ],
+    "description": "Structured binding: :=, shorthand for a set"
+  }
+}

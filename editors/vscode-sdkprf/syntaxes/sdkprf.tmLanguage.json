@@ -1,0 +1,353 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Sodukuvania Proof",
+  "scopeName": "source.sdkprf",
+  "fileTypes": [
+    "sdkprf"
+  ],
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#block-header"
+    },
+    {
+      "include": "#block-end"
+    },
+    {
+      "include": "#import"
+    },
+    {
+      "include": "#rule-definition"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#implicit-brackets"
+    },
+    {
+      "include": "#variables"
+    },
+    {
+      "include": "#greek"
+    },
+    {
+      "include": "#number-sets"
+    },
+    {
+      "include": "#coordinates"
+    },
+    {
+      "include": "#qualified-names"
+    },
+    {
+      "include": "#operators"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#punctuation"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "match": "//.*$",
+          "name": "comment.line.double-slash.sdkprf"
+        },
+        {
+          "begin": "/\\*",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.comment.begin.sdkprf"
+            }
+          },
+          "end": "\\*/",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.comment.end.sdkprf"
+            }
+          },
+          "name": "comment.block.sdkprf"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "begin": "\"",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.begin.sdkprf"
+            }
+          },
+          "end": "\"",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.end.sdkprf"
+            }
+          },
+          "name": "string.quoted.double.sdkprf",
+          "patterns": [
+            {
+              "match": "\\\\.",
+              "name": "constant.character.escape.sdkprf"
+            }
+          ]
+        }
+      ]
+    },
+    "block-header": {
+      "patterns": [
+        {
+          "match": "^(\\s*)(intro|section)(?=\\s|:)(\\s*)([^\\s:()\\[\\]{}=>]+)(\\s*)(:)",
+          "captures": {
+            "2": {
+              "name": "keyword.control.block.sdkprf"
+            },
+            "4": {
+              "name": "entity.name.type.block.sdkprf"
+            },
+            "6": {
+              "name": "punctuation.separator.key-value.sdkprf"
+            }
+          }
+        },
+        {
+          "match": "^(\\s*)(intro|section)(?=\\s|:)",
+          "captures": {
+            "2": {
+              "name": "keyword.control.block.sdkprf"
+            }
+          }
+        }
+      ]
+    },
+    "block-end": {
+      "patterns": [
+        {
+          "match": "^(\\s*)(end)(?:\\s+([^\\s]+))?",
+          "captures": {
+            "2": {
+              "name": "keyword.control.block.end.sdkprf"
+            },
+            "3": {
+              "name": "entity.name.type.block.sdkprf"
+            }
+          }
+        }
+      ]
+    },
+    "import": {
+      "patterns": [
+        {
+          "match": "^(\\s*)(import)(\\s+)([\\p{L}\\p{N}_-]+(?:\\.[\\p{L}\\p{N}_-]+)*)",
+          "captures": {
+            "2": {
+              "name": "keyword.control.import.sdkprf"
+            },
+            "4": {
+              "name": "entity.name.namespace.import.sdkprf"
+            }
+          }
+        }
+      ]
+    },
+    "rule-definition": {
+      "patterns": [
+        {
+          "match": "^(\\s*)(-+)(\\s+)([^\\s:()\\[\\]{}=>]+)(\\s*)(:)",
+          "captures": {
+            "2": {
+              "name": "punctuation.definition.depth.sdkprf"
+            },
+            "4": {
+              "name": "entity.name.function.rule.sdkprf"
+            },
+            "6": {
+              "name": "punctuation.separator.key-value.sdkprf"
+            }
+          }
+        },
+        {
+          "match": "^(\\s*)(?!(?:intro|section|end|import|unlock)\\b)([^\\s:()\\[\\]{}=>]+)(\\s*)(:)",
+          "captures": {
+            "2": {
+              "name": "entity.name.function.rule.sdkprf"
+            },
+            "4": {
+              "name": "punctuation.separator.key-value.sdkprf"
+            }
+          }
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "match": "\\bunlock\\b",
+          "name": "keyword.control.unlock.sdkprf"
+        },
+        {
+          "match": "\\b(?:intro|section|end|import)\\b",
+          "name": "keyword.control.sdkprf"
+        },
+        {
+          "match": "\\bwith\\b",
+          "name": "keyword.other.with.sdkprf"
+        },
+        {
+          "match": "\\bby\\b",
+          "name": "keyword.other.by.sdkprf"
+        },
+        {
+          "match": "\\b(?:given|axioms|known)\\b",
+          "name": "constant.language.with-target.sdkprf"
+        }
+      ]
+    },
+    "implicit-brackets": {
+      "patterns": [
+        {
+          "match": "\\[",
+          "name": "punctuation.section.implicit.begin.sdkprf"
+        },
+        {
+          "match": "\\]",
+          "name": "punctuation.section.implicit.end.sdkprf"
+        }
+      ]
+    },
+    "variables": {
+      "patterns": [
+        {
+          "match": "\\$[\\p{L}_][\\p{L}\\p{N}_]*",
+          "name": "variable.other.dollar.sdkprf"
+        },
+        {
+          "match": "\\b_[\\p{L}\\p{N}_]+_\\b",
+          "name": "variable.other.underscore.sdkprf"
+        }
+      ]
+    },
+    "coordinates": {
+      "patterns": [
+        {
+          "match": "\\bu[gbrc]\\d+(?:u?[gbrc]\\d+)*\\b",
+          "name": "variable.other.coordinate.sdkprf"
+        }
+      ]
+    },
+    "greek": {
+      "patterns": [
+        {
+          "match": "\\b[αβγδεζηθικλμνξοπρστυφχψωΓΔΘΛΞΠΣΥΦΨΩϑϖϱςϕ]\\b",
+          "name": "variable.other.greek.sdkprf"
+        }
+      ]
+    },
+    "number-sets": {
+      "patterns": [
+        {
+          "match": "[ℕℤℚℝℂ𝔹]",
+          "name": "constant.language.number-set.sdkprf"
+        }
+      ]
+    },
+    "qualified-names": {
+      "patterns": [
+        {
+          "match": "\\b[\\p{L}_][\\p{L}\\p{N}_']*(?:\\.[\\p{L}_][\\p{L}\\p{N}_']*)+\\b",
+          "name": "entity.name.namespace.sdkprf"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "match": "=>",
+          "name": "keyword.operator.entailment.sdkprf"
+        },
+        {
+          "match": "=\\?",
+          "name": "keyword.operator.candidate.sdkprf"
+        },
+        {
+          "match": ":=",
+          "name": "keyword.operator.binding.sdkprf"
+        },
+        {
+          "match": "<=>|->|<-|<=|>=|==|!=|&&|\\|\\|",
+          "name": "keyword.operator.sdkprf"
+        },
+        {
+          "match": "=",
+          "name": "keyword.operator.assignment.sdkprf"
+        },
+        {
+          "match": "[¬∧∨→←↔⇒⇐⇔⟶⟵⟷⟹⟸⟺↦↪↑↓⇑⇓∀∃∄⊢⊣⊨⊩⊭⊤⊥∴∵]",
+          "name": "keyword.operator.logical.sdkprf"
+        },
+        {
+          "match": "[∈∉∋⊆⊂⊇⊃⊊⊋⊈⊉∪∩∖∅℘⋃⋂⊔⊓⊎⟨⟩⌊⌋⌈⌉∣∤∥]",
+          "name": "keyword.operator.set.sdkprf"
+        },
+        {
+          "match": "[+\\-*/^<>×÷±∓·⋯…∑∏∐∫∬∭∮⨁⨂√∞∂∇≤≥≠≈≡∼≃≅∝≪≫≺≻⪯⪰≲≳≜≔≐≍⋈⋄□■✓°∠△⋆∗∘•⊕⊖⊗⊘⊙†‡ℓℏℜℑℵ′‖]",
+          "name": "keyword.operator.math.sdkprf"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "match": "\\b\\d+(?:\\.\\d+)?\\b",
+          "name": "constant.numeric.sdkprf"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "match": "\\(",
+          "name": "punctuation.section.parens.begin.sdkprf"
+        },
+        {
+          "match": "\\)",
+          "name": "punctuation.section.parens.end.sdkprf"
+        },
+        {
+          "match": "\\{",
+          "name": "punctuation.section.braces.begin.sdkprf"
+        },
+        {
+          "match": "\\}",
+          "name": "punctuation.section.braces.end.sdkprf"
+        },
+        {
+          "match": ",",
+          "name": "punctuation.separator.comma.sdkprf"
+        },
+        {
+          "match": ";",
+          "name": "punctuation.terminator.sdkprf"
+        },
+        {
+          "match": ":",
+          "name": "punctuation.separator.key-value.sdkprf"
+        },
+        {
+          "match": "\\.",
+          "name": "punctuation.separator.dot.sdkprf"
+        }
+      ]
+    }
+  }
+}

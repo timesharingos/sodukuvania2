@@ -1,0 +1,114 @@
+{
+  "name": "sdkprf",
+  "displayName": "Sodukuvania Proof",
+  "description": "Syntax highlighting and language support for .sdkprf (Sodukuvania proof) files.",
+  "version": "0.2.3",
+  "publisher": "sodukuvania",
+  "private": true,
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "sodukuvania",
+    "sdkprf",
+    "proof",
+    "syntax"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:sdkprf",
+    "onCommand:sdkprf.reindex"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "sdkprf",
+        "aliases": [
+          "Sodukuvania Proof",
+          "sdkprf"
+        ],
+        "extensions": [
+          ".sdkprf"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "sdkprf",
+        "scopeName": "source.sdkprf",
+        "path": "./syntaxes/sdkprf.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "sdkprf",
+        "path": "./snippets/sdkprf.json"
+      }
+    ],
+    "semanticTokenScopes": [
+      {
+        "language": "sdkprf",
+        "scopes": {
+          "function": [
+            "entity.name.function.rule.sdkprf"
+          ],
+          "type": [
+            "entity.name.type.block.sdkprf"
+          ]
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command": "sdkprf.reindex",
+        "title": "Sodukuvania: Rebuild Rule Index"
+      }
+    ],
+    "configuration": {
+      "title": "Sodukuvania Proof",
+      "properties": {
+        "sdkprf.unicodeInput.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Type a LaTeX name such as `\\to` or `\\forall`, then press Space or Tab to replace it with the Unicode symbol. Typing a backslash also opens the symbol completion list."
+        },
+        "sdkprf.rainbowBrackets.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Draw `[]`, `()`, and `{}` in six colors by nesting depth. When disabled, the 6-color decorations are removed; enable `editor.bracketPairColorization.enabled` manually to use VS Code's native bracket colors."
+        },
+        "sdkprf.rainbowBrackets.palette": {
+          "type": "string",
+          "enum": [
+            "accessible",
+            "theme"
+          ],
+          "enumDescriptions": [
+            "Use a high-contrast six-color palette chosen for the current light or dark theme (recommended; avoids dark brackets in dark themes).",
+            "Use the current theme's editorBracketHighlight.foreground1..6 colors."
+          ],
+          "default": "accessible",
+          "markdownDescription": "Color palette for rainbow brackets. The default `accessible` palette picks high-contrast colors for the current light or dark theme; `theme` follows the theme's bracket highlight colors."
+        }
+      }
+    },
+    "configurationDefaults": {
+      "[sdkprf]": {
+        "editor.bracketPairColorization.enabled": false
+      }
+    }
+  },
+  "scripts": {
+    "test": "node test/parser.test.js && node test/scan.test.js && node test/brackets.test.js && node test/latex.test.js && node test/tokenize.test.js && node test/extension.test.js",
+    "tokenize": "node test/tokenize.test.js",
+    "package": "npx @vscode/vsce package --allow-missing-repository --skip-license --no-dependencies --no-rewrite-relative-links"
+  },
+  "devDependencies": {
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.2.0"
+  }
+}

@@ -1,0 +1,26 @@
+// Sodukuvania proof syntax example
+// Only used to test syntax highlighting and structural parsing; not a verifiable proof.
+
+import sudoku.core
+import sudoku.rules.hidden_single
+
+// Top-level rule: one remaining candidate -> fill it in
+single_value: [uc1 =? {5}] => uc1 = 5 with (with given)
+
+// Use another rule as a premise
+use_single: single_value with (with known) => uc1 = 5
+
+// Variables: $name and _name_ differ only in spelling
+rename: $x = _y_ => $x = _y_
+
+intro hidden:
+  - row_hidden: [ur1 =? {5}] => ur1 = 5
+  - block_hidden: [ub1 =? {5}] => ub1 = 5
+end hidden
+
+section advanced:
+  - sum_rule: ug1 =? {1, 2, 3} with (with axioms by total=6) => ug1 =? {1, 2}
+  - next_rule: hidden.row_hidden with (with known) => ur1 = 5
+end advanced
+
+unlock ug1

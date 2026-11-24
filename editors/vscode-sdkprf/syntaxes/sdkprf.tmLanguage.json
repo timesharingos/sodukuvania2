@@ -43,6 +43,9 @@
       "include": "#coordinates"
     },
     {
+      "include": "#premise-references"
+    },
+    {
       "include": "#qualified-names"
     },
     {
@@ -228,12 +231,30 @@
     "variables": {
       "patterns": [
         {
-          "match": "\\$[\\p{L}_][\\p{L}\\p{N}_]*",
+          "match": "\\$[\\p{L}\\p{N}_][\\p{L}\\p{N}_]*",
           "name": "variable.other.dollar.sdkprf"
         },
         {
           "match": "\\b_[\\p{L}\\p{N}_]+_\\b",
           "name": "variable.other.underscore.sdkprf"
+        }
+      ]
+    },
+    "premise-references": {
+      "patterns": [
+        {
+          "match": "\\b([\\p{L}_][\\p{L}\\p{N}_']*(?:\\.[\\p{L}_][\\p{L}\\p{N}_']*)*)(\\.)(\\d+)\\b",
+          "captures": {
+            "1": {
+              "name": "entity.name.function.rule.sdkprf"
+            },
+            "2": {
+              "name": "punctuation.separator.dot.sdkprf"
+            },
+            "3": {
+              "name": "constant.numeric.premise-index.sdkprf"
+            }
+          }
         }
       ]
     },
@@ -276,20 +297,44 @@
           "name": "keyword.operator.entailment.sdkprf"
         },
         {
+          "match": "!==",
+          "name": "keyword.operator.negation.equality.sdkprf"
+        },
+        {
+          "match": "!=\\?",
+          "name": "keyword.operator.negation.candidate.sdkprf"
+        },
+        {
+          "match": "!:=",
+          "name": "keyword.operator.negation.binding.sdkprf"
+        },
+        {
+          "match": "!=",
+          "name": "keyword.operator.negation.assignment.sdkprf"
+        },
+        {
           "match": "=\\?",
           "name": "keyword.operator.candidate.sdkprf"
+        },
+        {
+          "match": "==",
+          "name": "keyword.operator.equality.sdkprf"
         },
         {
           "match": ":=",
           "name": "keyword.operator.binding.sdkprf"
         },
         {
-          "match": "<=>|->|<-|<=|>=|==|!=|&&|\\|\\|",
+          "match": "<=>|->|<-|<=|>=|&&|\\|\\|",
           "name": "keyword.operator.sdkprf"
         },
         {
           "match": "=",
           "name": "keyword.operator.assignment.sdkprf"
+        },
+        {
+          "match": "!",
+          "name": "keyword.operator.negation.sdkprf"
         },
         {
           "match": "[¬∧∨→←↔⇒⇐⇔⟶⟵⟷⟹⟸⟺↦↪↑↓⇑⇓∀∃∄⊢⊣⊨⊩⊭⊤⊥∴∵]",

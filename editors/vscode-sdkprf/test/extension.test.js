@@ -325,6 +325,39 @@ async function main() {
   );
   assert.strictEqual(metaDefinition, undefined, 'meta variable should not jump to a rule');
 
+  // <ref_name>.<idx> is a premise reference; hover shows the rule and
+  // go-to-definition resolves it.
+  const premiseRuleText = '  - use: target.0 => q';
+  const premiseDocument = makeDocument(
+    ['section s:', '  - target: p => q', premiseRuleText, 'end s'].join('\n')
+  );
+  const premisePosition = new Position(2, premiseRuleText.indexOf('target.0') + 3);
+  const premiseHover = await providers.hover.provideHover(premiseDocument, premisePosition);
+  assert(premiseHover instanceof Hover, 'premise reference hover should exist');
+  assert(
+    premiseHover.contents.value.includes('Premise reference'),
+    'premise reference should be documented as such'
+  );
+  const premiseDefinition = await providers.definition.provideDefinition(
+    premiseDocument,
+    premisePosition
+  );
+  assert(
+    premiseDefinition instanceof Location,
+    'premise reference should jump to the referenced rule'
+  );
+
+  const equalityDocument = makeDocument('x: $a !== $b => q');
+  const equalityHover = await providers.hover.provideHover(
+    equalityDocument,
+    new Position(0, 6)
+  );
+  assert(equalityHover instanceof Hover, 'negated equality hover should exist');
+  assert(
+    equalityHover.contents.value.includes('not equal'),
+    '!== should be documented as object inequality'
+  );
+
   // Simulate "\to" followed by a space: the handler should replace only the
   // command and leave the inserted space alone.
   const inputDocument = makeDocument('x = \\to ');

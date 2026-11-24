@@ -84,13 +84,15 @@ const KEYWORD_INFO = {
       '(with known)',
       '```',
       '',
-      'Predefined targets: `given` (board givens), `axioms` (pure mathematics), `known` (geometric relations).'
+      'Predefined targets: `given` (board givens), `axioms` (pure mathematics), `known` (geometric relations).',
+      '',
+      'A premise without a `with` clause is a condition; a premise with a `with` clause is an evidence reference. Only premises that all carry `with` clauses form an inference process; otherwise the rule is an inference rule.'
     ].join('\n')
   },
   by: {
     kind: vscode.CompletionItemKind.Keyword,
     detail: 'meta-variable binding',
-    doc: '**by** — binds meta-variables inside a `with` clause: `by <meta_var>=<value>...`.'
+    doc: '**by** — binds meta-variables inside a `with` clause: `by <meta_var>=<value>...`. Variables that are not fully bound remain in the premises and can be referenced later.'
   },
   given: {
     kind: vscode.CompletionItemKind.Constant,
@@ -131,6 +133,30 @@ const OPERATOR_INFO = {
   '=': {
     detail: 'value assignment',
     doc: '**`=`** — assigns a number; flattens automatically and wraps a single element.'
+  },
+  '==': {
+    detail: 'object equality',
+    doc: '**`==`** — object content equality (coordinates, values, etc.).'
+  },
+  '!=': {
+    detail: 'negated assignment',
+    doc: '**`!=`** — negated `=`: the value cannot be filled in.'
+  },
+  '!==': {
+    detail: 'object inequality',
+    doc: '**`!==`** — negated `==`: object contents are not equal.'
+  },
+  '!=?': {
+    detail: 'negated candidate set',
+    doc: '**`!=?`** — negated `=?`: the candidate-set assertion does not hold.'
+  },
+  '!:=': {
+    detail: 'negated structured binding',
+    doc: '**`!:=`** — negated `:=`.'
+  },
+  '!': {
+    detail: 'negation prefix',
+    doc: '**`!`** — negation prefix for the section-5 markers: `!=`, `!=?`, `!==`, `!:=`.'
   }
 };
 
@@ -152,7 +178,10 @@ const VARIABLE_DOC = [
   '**Variables**',
   '',
   'A variable can be written as `$<name>` or `_<name>_`; the two forms differ only in spelling, and the real ID is `<name>`.',
-  'Substitution rule: all variables with the same name are replaced.'
+  'Substitution rule: all variables with the same name are replaced.',
+  '',
+  '`$<nat>` (a `$` followed by a natural number, for example `$0` or `$1`) is a special anonymous variable. It is implicitly rewritten to `$<rule_name>-<premises_idx>-<nat>` and is used as a filler for unrelated variable bindings.',
+  'Variables left unbound by a `with by` clause remain in the premises and can be referenced later.'
 ].join('\n');
 
 const BY_META_DOC =
@@ -189,6 +218,20 @@ function findBlock(parsed, name) {
     parsed.blocks.find((block) => block.path === name) ||
     parsed.blocks.find((block) => block.name === name)
   );
+}
+
+const PREMISE_REFERENCE_RE =
+  /^([\p{L}_][\p{L}\p{N}_']*(?:\.[\p{L}_][\p{L}\p{N}_']*)*)\.(\d+)$/u;
+
+function splitPremiseReference(text) {
+  const match = PREMISE_REFERENCE_RE.exec(text);
+  if (!match) {
+    return undefined;
+  }
+  return {
+    base: match[1],
+    index: Number(match[2])
+  };
 }
 
 /**
@@ -337,7 +380,7 @@ function isInCommentOrString(document, position) {
   return inBlock || inString || inLine;
 }
 
-const TOKEN_RE = /=>|=\?|:=|\$[\p{L}_][\p{L}\p{N}_]*|\b_[\p{L}\p{N}_]+_\b|\bu[gbrc]\d+(?:u?[gbrc]\d+)*\b|\b(?:intro|section|end|import|unlock|with|by|given|axioms|known)\b|[\p{L}_][\p{L}\p{N}_']*(?:\.[\p{L}_][\p{L}\p{N}_']*)*|=/gu;
+const TOKEN_RE = /!==|!=\?|!:=|!=|==|=>|=\?|:=|\$[\p{L}\p{N}_][\p{L}\p{N}_]*|\b_[\p{L}\p{N}_]+_\b|\bu[gbrc]\d+(?:u?[gbrc]\d+)*\b|\b(?:intro|section|end|import|unlock|with|by|given|axioms|known)\b|[\p{L}_][\p{L}\p{N}_']*(?:\.[\p{L}_][\p{L}\p{N}_']*)*\.\d+\b|[\p{L}_][\p{L}\p{N}_']*(?:\.[\p{L}_][\p{L}\p{N}_']*)*|!|=/gu;
 
 function tokenAt(document, position) {
   const line = document.lineAt(position.line).text;
@@ -389,6 +432,22 @@ function markdownBlock(block, document) {
     '',
     `Lines ${block.startLine + 1}–${block.endLine + 1}; contains ${ruleCount} direct child rule${ruleCount === 1 ? '' : 's'}.`
   ].join('\n');
+}
+
+function markdownPremiseReference(reference, rule, filePath) {
+  const lines = [
+    `**Premise reference** \`${reference.base}.${reference.index}\``,
+    '',
+    `References premise index ${reference.index} of rule \`${rule.path}\`.`,
+    '',
+    '```sdkprf',
+    rule.signature,
+    '```'
+  ];
+  if (filePath) {
+    lines.push('', `File: \`${filePath}\``);
+  }
+  return lines.join('\n');
 }
 
 const BRACKET_PALETTES = Object.freeze({
@@ -771,6 +830,41 @@ class SdkprfHoverProvider {
     }
 
     const parsed = parseText(document.getText());
+    const premiseRef = splitPremiseReference(token.text);
+    if (premiseRef) {
+      const localRule = findRule(parsed, premiseRef.base);
+      if (localRule) {
+        return new vscode.Hover(
+          new vscode.MarkdownString(markdownPremiseReference(premiseRef, localRule)),
+          token.range
+        );
+      }
+
+      const premiseRules = await this.index.getRules();
+      const fullMatches = premiseRules.filter((entry) => entry.fullName === premiseRef.base);
+      const pathMatches = premiseRules.filter((entry) => entry.rule.path === premiseRef.base);
+      const nameMatches = premiseRules.filter((entry) => entry.rule.name === premiseRef.base);
+      const workspaceRule =
+        fullMatches[0] ||
+        (pathMatches.length === 1 ? pathMatches[0] : undefined) ||
+        (nameMatches.length === 1 ? nameMatches[0] : undefined);
+      if (workspaceRule) {
+        return new vscode.Hover(
+          new vscode.MarkdownString(
+            markdownPremiseReference(premiseRef, workspaceRule.rule, workspaceRule.relativePath)
+          ),
+          token.range
+        );
+      }
+
+      const generic = [
+        `**Premise reference** \`${token.text}\``,
+        '',
+        `References premise index ${premiseRef.index} of rule \`${premiseRef.base}\`.`
+      ].join('\n');
+      return new vscode.Hover(new vscode.MarkdownString(generic), token.range);
+    }
+
     const rule = findRule(parsed, token.text);
     if (rule) {
       return new vscode.Hover(new vscode.MarkdownString(markdownRule(rule, document)), token.range);
@@ -844,6 +938,35 @@ class SdkprfDefinitionProvider {
     }
 
     const parsed = parseText(document.getText());
+    const premiseRef = splitPremiseReference(token.text);
+    if (premiseRef) {
+      const refRule = findRule(parsed, premiseRef.base);
+      if (refRule) {
+        return new vscode.Location(document.uri, ruleSelectionRange(document, refRule));
+      }
+
+      const allRules = await this.index.getRules();
+      const fullMatches = allRules.filter((entry) => entry.fullName === premiseRef.base);
+      const pathMatches = allRules.filter((entry) => entry.rule.path === premiseRef.base);
+      const nameMatches = allRules.filter((entry) => entry.rule.name === premiseRef.base);
+      const match =
+        fullMatches[0] ||
+        (pathMatches.length === 1 ? pathMatches[0] : undefined) ||
+        (nameMatches.length === 1 ? nameMatches[0] : undefined);
+      if (match) {
+        return new vscode.Location(
+          match.uri,
+          new vscode.Range(
+            match.rule.line,
+            match.rule.nameStart,
+            match.rule.line,
+            match.rule.nameEnd
+          )
+        );
+      }
+      return undefined;
+    }
+
     const localRule = findRule(parsed, token.text);
     if (localRule) {
       return new vscode.Location(document.uri, ruleSelectionRange(document, localRule));

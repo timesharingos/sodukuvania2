@@ -165,6 +165,29 @@ async function main() {
   assertScope(unicodeLine, 'ℕ', 'constant.language.number-set.sdkprf');
   assertScope(unicodeLine, '→', 'keyword.operator.logical.sdkprf');
 
+  // Premise references and special $<nat> variables.
+  const premiseLineText = 'ref: single_value.0 => $0';
+  const premiseLine = {
+    line: premiseLineText,
+    tokens: grammar.tokenizeLine(premiseLineText, vsctm.INITIAL).tokens
+  };
+  assertScope(premiseLine, 'single_value', 'entity.name.function.rule.sdkprf');
+  assertScope(premiseLine, '0', 'constant.numeric.premise-index.sdkprf');
+  assertScope(premiseLine, '$0', 'variable.other.dollar.sdkprf');
+
+  // Equality and negated section-5 operators.
+  const operatorLineText =
+    'ops: $a == $b ∧ $a != $b ∧ $a !== $b ∧ $a !=? $b ∧ $a !:= $b';
+  const operatorLine = {
+    line: operatorLineText,
+    tokens: grammar.tokenizeLine(operatorLineText, vsctm.INITIAL).tokens
+  };
+  assertScope(operatorLine, '==', 'keyword.operator.equality.sdkprf');
+  assertScope(operatorLine, '!=', 'keyword.operator.negation.assignment.sdkprf', 0);
+  assertScope(operatorLine, '!==', 'keyword.operator.negation.equality.sdkprf');
+  assertScope(operatorLine, '!=?', 'keyword.operator.negation.candidate.sdkprf');
+  assertScope(operatorLine, '!:=', 'keyword.operator.negation.binding.sdkprf');
+
   // Block comments must continue across lines and end on */.
   const blockStart = grammar.tokenizeLine('/* several', vsctm.INITIAL);
   assert(

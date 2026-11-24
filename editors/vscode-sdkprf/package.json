@@ -2,7 +2,7 @@
   "name": "sdkprf",
   "displayName": "Sodukuvania Proof",
   "description": "Syntax highlighting and language support for .sdkprf (Sodukuvania proof) files.",
-  "version": "0.2.3",
+  "version": "0.2.5",
   "publisher": "sodukuvania",
   "private": true,
   "engines": {

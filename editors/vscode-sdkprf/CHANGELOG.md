@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.2.5
+
+- Added `==` as object-content equality with its own scope and hover documentation.
+- Added the `!` negation prefix for section-5 markers:
+  `!=` (cannot fill the value), `!=?` (candidate-set assertion fails), `!==` (object contents are
+  not equal), and `!:=` (negated structured binding). Each form has its own scope and hover text.
+- Updated `proof/syntax.txt` section 5, the README, and tokenizer/hover tests.
+
+## 0.2.4
+
+- Added support for the updated `proof/syntax.txt`:
+  - `<ref_name>.<idx>` premise references are highlighted with separate rule/index scopes, shown on
+    hover with the referenced rule, and resolved by go-to-definition.
+  - `$<nat>` special variables such as `$0` and `$1` are now highlighted as variables; the hover
+    documentation explains their implicit renaming.
+  - Hover documentation for `with` / `by` now describes conditions, evidence references,
+    all-with inference processes, and variables left unbound by `with by`.
+- Updated the README syntax coverage and limitations.
+
 ## 0.2.3
 
 - Translated the extension README to English.

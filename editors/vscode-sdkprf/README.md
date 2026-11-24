@@ -11,7 +11,8 @@ LaTeX-style Unicode math input, and six-color rainbow brackets.
 
 - **Syntax highlighting** for rule names, `intro` / `section` / `end` blocks, `import`, `unlock`,
   `with` / `by`, `given` / `axioms` / `known`, variables, coordinates, `=>` / `=?` / `:=` / `=`,
-  math and set symbols, the `[ ]` implicit-verification marker, and comments.
+  `==`, negated operators such as `!=` / `!==`, math and set symbols, the `[ ]`
+  implicit-verification marker, and comments.
 - **LaTeX-style symbol input**: type `\to`, `\forall`, `\in`, etc. and press Space or Tab to get
   `→`, `∀`, `∈`; type `\` to open the full symbol completion list. See
   [Math symbol input](#math-symbol-input-latex-style).
@@ -20,17 +21,19 @@ LaTeX-style Unicode math input, and six-color rainbow brackets.
   "unexpected bracket" color. See [Rainbow brackets](#rainbow-brackets).
 - **Rule-reference highlighting**: bare references such as `single_value` and
   `hidden.row_hidden` are highlighted with semantic tokens when they match a known rule or block.
+- **Premise references**: `<ref_name>.<idx>` such as `single_value.0` is highlighted, shown on
+  hover with the referenced rule, and resolved by go-to-definition.
 - **Completion**:
   - keywords, `with` targets, and operators;
   - rule names and block-qualified names from the current file (e.g. `hidden.row_hidden`);
   - rules from other `.sdkprf` files in the workspace, with their module prefix;
   - module paths on `import` lines;
   - LaTeX symbol names after `\`.
-- **Hover documentation**: keyword meanings, rule signatures and definition locations, block
-  information, coordinate breakdowns, and variable explanations.
+- **Hover documentation**: keyword meanings, rule signatures and definition locations,
+  premise-reference targets, block information, coordinate breakdowns, and variable explanations.
 - **Outline / breadcrumbs**: rules grouped by their `intro` / `section` / `end` nesting.
 - **Folding**: fold an entire `intro` / `section` block.
-- **Go to definition**: Ctrl/Cmd + click a rule or block name, including across files.
+- **Go to definition**: Ctrl/Cmd + click a rule, block, or premise reference, including across files.
 - **Lightweight diagnostics**: check `end` / block-name mismatches on open and save, without
   interrupting normal typing.
 - **Snippets**: `rule`, `intro`, `section`, `with`, `withby`, `import`, `unlock`, `implicit`,
@@ -40,10 +43,10 @@ LaTeX-style Unicode math input, and six-color rainbow brackets.
 
 ### Option 1: Install the VSIX
 
-The built package is `editors/vscode-sdkprf/sdkprf-0.2.3.vsix` (when present):
+The built package is `editors/vscode-sdkprf/sdkprf-0.2.5.vsix` (when present):
 
 ```powershell
-code --install-extension "D:\project\sodukuvania-ast\editors\vscode-sdkprf\sdkprf-0.2.3.vsix"
+code --install-extension "D:\project\sodukuvania-ast\editors\vscode-sdkprf\sdkprf-0.2.5.vsix"
 ```
 
 You can also use **Extensions** → `...` → **Install from VSIX...** in VS Code.
@@ -65,7 +68,7 @@ This is the most direct option, though it is not recommended for regular use. Co
 `editors/vscode-sdkprf` folder to:
 
 ```text
-%USERPROFILE%\.vscode\extensions\sodukuvania.sdkprf-0.2.3
+%USERPROFILE%\.vscode\extensions\sodukuvania.sdkprf-0.2.5
 ```
 
 Then restart VS Code. `.sdkprf` files are recognized as **Sodukuvania Proof**.
@@ -86,6 +89,7 @@ Then restart VS Code. `.sdkprf` files are recognized as **Sodukuvania Proof**.
 | Syntax | Example | TextMate scope |
 | --- | --- | --- |
 | Rule definition | `single_value:` | `entity.name.function.rule.sdkprf` |
+| Premise reference | `single_value.0` | `entity.name.function.rule.sdkprf` + `constant.numeric.premise-index.sdkprf` |
 | Block header | `intro hidden:` / `section advanced:` | `keyword.control.block.sdkprf` + `entity.name.type.block.sdkprf` |
 | Block end | `end hidden` | `keyword.control.block.end.sdkprf` |
 | Level dashes | `  - rule:` (top-level block) / `    -- rule:` (nested block) | `punctuation.definition.depth.sdkprf` |
@@ -96,6 +100,8 @@ Then restart VS Code. `.sdkprf` files are recognized as **Sodukuvania Proof**.
 | Variables | `$x`, `_y_` | `variable.other.dollar.sdkprf` / `variable.other.underscore.sdkprf` |
 | Coordinates | `ug1`, `ub2`, `ur3`, `uc4` | `variable.other.coordinate.sdkprf` |
 | Rule separator | `=>` | `keyword.operator.entailment.sdkprf` |
+| Object equality | `==` | `keyword.operator.equality.sdkprf` |
+| Negated operators | `!=`, `!=?`, `!==`, `!:=` | `keyword.operator.negation.*` |
 | Candidate set | `=?` | `keyword.operator.candidate.sdkprf` |
 | Structured binding | `:=` | `keyword.operator.binding.sdkprf` |
 | Implicit verification | `[stat]` | `punctuation.section.implicit.begin/end.sdkprf` |
@@ -109,6 +115,50 @@ Then restart VS Code. `.sdkprf` files are recognized as **Sodukuvania Proof**.
 > nested block. A rule may span multiple lines: subsequent lines that are indented deeper than the
 > rule line are treated as continuation lines, and hover, completion documentation, and the outline
 > preserve the full signature.
+>
+> A premise without a `with` clause is a condition; a premise with a `with` clause is an evidence
+> reference. Only premises that all carry `with` clauses form an inference process; otherwise the
+> rule is an inference rule. See [Premises and references](#premises-and-references).
+
+## Premises and references
+
+A premise without a `with` clause is a condition; a premise with a `with` clause is an evidence
+reference. Only premises that all carry `with` clauses form an inference process; otherwise the
+rule is an inference rule.
+
+A premise reference has the form `<ref_name>.<idx>` and denotes the `<idx>`-th premise of the named
+rule, treated as a `<stat>`:
+
+```sdkprf
+use_single: single_value.0 => ...
+```
+
+The extension highlights the reference (the rule name and the premise index use different scopes),
+shows the referenced rule's signature on hover, and jumps to the rule definition with
+Ctrl/Cmd+click. The index itself is not evaluated or bounds-checked by the editor.
+
+Variables left unbound by a `with by` clause remain in the premises and can be referenced later.
+A `$` followed by a natural number, such as `$0` or `$1`, is the special `$<nat>` variable; it is
+implicitly rewritten to `$<rule_name>-<premises_idx>-<nat>` and used as a filler for unrelated
+variable bindings.
+
+## Equality and negation
+
+`==` compares object contents, for example coordinates or values:
+
+```sdkprf
+$cord1 == $cord2
+```
+
+Prefixing a marker from section 5 with `!` negates it:
+
+- `!=` — negated `=`: the value cannot be filled in;
+- `!=?` — negated `=?`: the candidate-set assertion does not hold;
+- `!==` — negated `==`: object contents are not equal;
+- `!:=` — negated `:=`.
+
+Each form has its own TextMate scope and hover documentation. A standalone `!` is also highlighted
+as a negation prefix.
 
 Math/logic symbols (`¬ ∧ ∨ → ↔ ∀ ∃ ∈ ∉ ⊆ ∪ ∩ ≠ ≤ ≥`, etc.) use
 `keyword.operator.logical/set/math.sdkprf`. Greek letters use
@@ -212,6 +262,8 @@ checker.
   distinguished syntactically between a `<ref_name>` and an ordinary mathematical term. Rule
   references are therefore highlighted by **matching known definition names**; a bare name is only
   colored when it matches a known rule or block.
+- Premise references `<ref_name>.<idx>` are highlighted and resolve to the referenced rule, but the
+  editor does not evaluate the index or split the semi-formal premises into individual statements.
 - Blocks are nested by `end`, not by indentation. The leading dash count is highlighted but not
   validated.
 - Coordinates are implemented as `u` + `g/b/r/c` + digits, including concatenations such as
@@ -236,7 +288,7 @@ checker.
 cd editors/vscode-sdkprf
 npm install
 npm test        # parser + scanner + brackets + latex + TextMate tokenizer + extension smoke
-npm run package # requires @vscode/vsce; produces sdkprf-0.2.3.vsix
+npm run package # requires @vscode/vsce; produces sdkprf-0.2.5.vsix
 ```
 
 - `npm test` tokenizes `samples/example.sdkprf` with `vscode-textmate` + `vscode-oniguruma`, so

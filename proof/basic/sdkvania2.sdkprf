@@ -1,0 +1,11 @@
+import proof.basic.ruleset
+
+section sdkvania2:
+    - unique_sum:
+        [in_main_grids], // the independent boss puzzles may not follow the uniqueness.
+        proof.basic.ruleset.quest.sum_line_with_common 
+            (with proof.basic.ruleset.quest.sum_line_with_common by line=$line1, sum=$1, split=$2, splits=$3)
+        proof.basic.ruleset.quest.sum_line_with_common
+            (with proof.basic.ruleset.quest.sum_line_with_common by line=$line2, sum=$1, split=$2, splits=$3)
+        => $line1 = $line2
+end

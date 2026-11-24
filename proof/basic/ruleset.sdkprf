@@ -1,0 +1,39 @@
+section basicrule:
+    - solvable: => ∀ $cord, ∃ $cans, $cord =? $cans ∧ card($cans) ≥ 1 (with given)
+    - only_solvable: ∀ $cord, $cord = $a ∧ $cord = $b => $a == $b (with given)
+    - soundness: $cord = $a => (∀ cans, $cord =? $cans → $a ∈ $cans) (with given)
+    - forced_value: => ∀ $cord, ∃ $v ∈ $vset, [finset($vset)], $cord =? {$v} → $cord = $v (with axioms by type=setcounting, proof=negative, src1=hypo, src2=soundness)
+    - range: => ∀ $cord, ∃ $cans, ∃ $range, $cord =? $cans → $cans ⊂ $range (with given)
+    - unique_region: [is_unique($region)] => ∀ $cord1, $cord2, ($cord1 !== $cord2) → ($cord1 = $a ∧ $cord2 = $b) → ($a !== ∅ ∧ $b !== ∅ ) → $a !== $b (with given)
+    - empty_imp_invalid: solvable, $cord1 = $a → $cord2 =? ∅ => $cord1 != $a (with axioms by type=negative, src1=solvable, src2=$cord2)
+    - unique_existence: 
+        range (with range by range=$range, cord=$1, cans=$2),
+        unique_region (with unique_region by region=$region, cord1=$3, cord2=$4, a=$5, b=$6),
+        card($region) == card($range) => 
+        ∀ $c ∈ $range, ∃ $cord ∈ $region, $cord = $c ∨ ($cord = ∅ ∧ 
+            (∃ $cans, $cord =? $cans ∧ $c ∈ $cans ∧
+                (∀ $cord2 ∈ $region, $cord !== $cord2 → (∃ $v2, $cord2 = $v2) → $v2 ∉ $cans ))
+        ) (with axioms by type=pigeon)
+end
+
+section quest:
+    - sum_line: [is_sum_line($line)] => ∃ $sum, ∃ $splits, 
+        (∪ $splits == $line) ∧ disjoint($splits)
+        ∧ (∀ $split ∈ $splits, sum($split) == $sum ∧ (∀ $cell1 ∈ $split, ∀ $cell2 ∈ $split2, [sameregion($cell1, $cell2)]))
+        ∧ (∀ $cellc1 ∈ $line, ∀ $cellc2 ∈ $line, connect($cellc1, $cellc2) → 
+            sameregion($cellc1, $cellc2) ↔ ∃ $splits1 ∈ $splits, ∃ $splits2 ∈ $splits, $cellc1 ∈ $splits1 ∧ $cellc2 ∈ $splits2)
+        (with given)
+    - sum_line_with_common: => sum_line (with sum_line by line=$line, sum=$sum, splits=$splits, split=$split, cell1=$sl3, cell2=$sl4, split2=$sl5, cellc1=$sl6, cellc2=$sl7, splits1=$sl8, splits2=$sl9) (with axioms type=specialize)
+    - sum_max: 
+        sum_line_with_common (with sum_line_with_common by sum=$sum, splits=$splits, line=$1, split=$2),
+        (∃ $split ∈ $splits, len($split) == $n),
+        range (with range by range=$range, cord=$10, cans=$11), 
+        [finset($range)], [wellorder($range)] =>
+        $sum ≤ topk($range, $n) (with axioms by exist=reduction, only=cartesian)
+    - sum_min: 
+        sum_line_with_common (with sum_line_with_common by sum=$sum, splits=$splits, line=$1, split=$2),
+        (∃ $split ∈ $splits, len($split) == $n),
+        range (with range by range=$range, cord=$10, cans=$11),
+        [finset($range)], [wellorder($range)] =>
+        $sum ≤ mink($range, $n) (with axioms by exist=reduction, only=cartesian)
+end

@@ -19,21 +19,24 @@ end
 section quest:
     - sum_line: [is_sum_line($line)] => ∃ $sum, ∃ $splits, 
         (∪ $splits == $line) ∧ disjoint($splits)
-        ∧ (∀ $split ∈ $splits, sum($split) == $sum ∧ (∀ $cell1 ∈ $split, ∀ $cell2 ∈ $split2, [sameregion($cell1, $cell2)]))
-        ∧ (∀ $cellc1 ∈ $line, ∀ $cellc2 ∈ $line, connect($cellc1, $cellc2) → 
+        ∧ (∀ $split ∈ $splits, (∀ $cells0 ∈ $split, ∃ $cells0v, $cells0=$cells0v) → sum($split) == $sum ∧ (∀ $cell1 ∈ $split, ∀ $cell2 ∈ $split2,
+        [sameregion($cell1, $cell2)])) ∧ (∀ $cellc1 ∈ $line, ∀ $cellc2 ∈ $line, connect($cellc1, $cellc2) → 
             sameregion($cellc1, $cellc2) ↔ ∃ $splits1 ∈ $splits, ∃ $splits2 ∈ $splits, $cellc1 ∈ $splits1 ∧ $cellc2 ∈ $splits2)
         (with given)
-    - sum_line_with_common: => sum_line (with sum_line by line=$line, sum=$sum, splits=$splits, split=$split, cell1=$sl3, cell2=$sl4, split2=$sl5, cellc1=$sl6, cellc2=$sl7, splits1=$sl8, splits2=$sl9) (with axioms type=specialize)
+    - sum_line_with_common: => sum_line (with sum_line by line=$line, sum=$sum, splits=$splits, split=$split, cells0=$1, cells0v=$2, cell1=$3, cell2=$4, split2=$5, cellc1=$6, cellc2=$7, splits1=$8, splits2=$9)
+        (with axioms type=specialize)
     - sum_max: 
+        solvable,
         sum_line_with_common (with sum_line_with_common by sum=$sum, splits=$splits, line=$1, split=$2),
         (∃ $split ∈ $splits, len($split) == $n),
         range (with range by range=$range, cord=$10, cans=$11), 
         [finset($range)], [wellorder($range)] =>
-        $sum ≤ topk($range, $n) (with axioms by exist=reduction, only=cartesian)
+        $sum ≤ topk($range, $n) (with axioms by exist=reduction, exist=setcounting, only=cartesian)
     - sum_min: 
+        solvable,
         sum_line_with_common (with sum_line_with_common by sum=$sum, splits=$splits, line=$1, split=$2),
         (∃ $split ∈ $splits, len($split) == $n),
         range (with range by range=$range, cord=$10, cans=$11),
         [finset($range)], [wellorder($range)] =>
-        $sum ≤ mink($range, $n) (with axioms by exist=reduction, only=cartesian)
+        $sum ≤ mink($range, $n) (with axioms by exist=reduction, exist=setcounting, only=cartesian)
 end
